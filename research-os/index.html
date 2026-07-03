@@ -481,6 +481,49 @@
 
   .results-placeholder-icon { font-size: 2rem; opacity: 0.4; }
 
+  .results-area.has-results {
+    align-items: flex-start;
+    justify-content: flex-start;
+    border-style: solid;
+    padding: 16px;
+    overflow-y: auto;
+    max-height: 480px;
+  }
+
+  .results-content {
+    width: 100%;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .results-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+  }
+
+  .results-meta span { color: var(--text-muted); }
+
+  .btn-run:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .sidebar-footer.disconnected .status-dot {
+    background: #f87171;
+    box-shadow: 0 0 6px rgba(248, 113, 113, 0.5);
+  }
+
   /* ── Loading Animation ── */
   .loading-dots {
     display: flex;
@@ -951,9 +994,9 @@
         </div>
       </div>
 
-      <div class="sidebar-footer">
+      <div class="sidebar-footer" id="connection-status">
         <span class="status-dot"></span>
-        <span>OpenRouter Connected</span>
+        <span id="connection-label">OpenRouter Connected</span>
       </div>
     </aside>
 
@@ -968,9 +1011,9 @@
         </div>
         <div class="topbar-right">
           <button class="router-badge" onclick="toggleRouterPanel()">
-            🔀 <span>Auto Router</span>
+            🔀 <span id="router-badge-label">Auto Router</span>
           </button>
-          <button class="btn-run" onclick="runResearch()">
+          <button class="btn-run" id="btn-run" onclick="runResearch()">
             ▶ Run Research
           </button>
         </div>
@@ -1063,17 +1106,17 @@
         <div class="workspace">
           <div class="workspace-left">
             <div class="workspace-label">Research Query</div>
-            <textarea class="query-textarea" placeholder="Enter your research question or topic…"></textarea>
+            <textarea class="query-textarea" id="query-input" placeholder="Enter your research question or topic…"></textarea>
             <div class="options-row">
               <div class="option-group">
                 <label for="model-select">Model</label>
                 <select class="option-select" id="model-select">
-                  <option>Auto Router</option>
-                  <option>Claude Sonnet 4.6</option>
-                  <option>Claude Opus 4.5</option>
-                  <option>GLM 4.7</option>
-                  <option>GLM 4.7 Flash</option>
-                  <option>DeepSeek V4</option>
+                  <option value="auto">Auto Router</option>
+                  <option value="claude">Claude Sonnet 4.6</option>
+                  <option value="claude-opus">Claude Opus 4.5</option>
+                  <option value="glm">GLM 4.7</option>
+                  <option value="glm-flash">GLM 4.7 Flash</option>
+                  <option value="deepseek">DeepSeek V4</option>
                 </select>
               </div>
               <div class="option-group">
@@ -1099,10 +1142,10 @@
 
           <div class="workspace-right">
             <div class="workspace-label">Results</div>
-            <div class="results-area">
-              <div class="results-placeholder">
+            <div class="results-area" id="results-area">
+              <div class="results-placeholder" id="results-placeholder">
                 <span class="results-placeholder-icon">🔍</span>
-                <span>Ready to Research</span>
+                <span id="results-placeholder-text">Ready to Research</span>
                 <div class="loading-dots" style="display: none;" id="loading-dots">
                   <span></span><span></span><span></span>
                 </div>
@@ -1124,7 +1167,7 @@
       <button class="panel-close" onclick="toggleRouterPanel()" aria-label="Close panel">✕</button>
     </div>
     <div class="panel-body">
-      <div class="model-card selected">
+      <div class="model-card selected" data-model="auto" onclick="selectModel('auto')">
         <div class="model-radio"></div>
         <div class="model-info">
           <div class="model-name">🔄 Auto Router</div>
@@ -1133,7 +1176,7 @@
         </div>
       </div>
 
-      <div class="model-card">
+      <div class="model-card" data-model="claude" onclick="selectModel('claude')">
         <div class="model-radio"></div>
         <div class="model-info">
           <div class="model-name">🟠 Claude Sonnet 4.6</div>
@@ -1142,7 +1185,7 @@
         </div>
       </div>
 
-      <div class="model-card">
+      <div class="model-card" data-model="claude-opus" onclick="selectModel('claude-opus')">
         <div class="model-radio"></div>
         <div class="model-info">
           <div class="model-name">🔴 Claude Opus 4.5</div>
@@ -1151,7 +1194,7 @@
         </div>
       </div>
 
-      <div class="model-card">
+      <div class="model-card" data-model="glm" onclick="selectModel('glm')">
         <div class="model-radio"></div>
         <div class="model-info">
           <div class="model-name">🟢 GLM 4.7</div>
@@ -1160,7 +1203,7 @@
         </div>
       </div>
 
-      <div class="model-card">
+      <div class="model-card" data-model="glm-flash" onclick="selectModel('glm-flash')">
         <div class="model-radio"></div>
         <div class="model-info">
           <div class="model-name">⚡ GLM 4.7 Flash</div>
@@ -1169,7 +1212,7 @@
         </div>
       </div>
 
-      <div class="model-card">
+      <div class="model-card" data-model="deepseek" onclick="selectModel('deepseek')">
         <div class="model-radio"></div>
         <div class="model-info">
           <div class="model-name">🔵 DeepSeek V4</div>
@@ -1181,8 +1224,8 @@
   </aside>
 
   <!-- Settings Modal -->
-  <div class="modal-overlay" id="settings-modal">
-    <div class="modal">
+  <div class="modal-overlay" id="settings-modal" onclick="closeSettingsOnOverlay(event)">
+    <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h2 class="modal-title">⚙️ Settings</h2>
         <button class="panel-close" onclick="toggleSettings()" aria-label="Close settings">✕</button>
@@ -1196,12 +1239,12 @@
         <div class="form-group">
           <label for="default-agent">Default Agent</label>
           <select class="form-input" id="default-agent" style="cursor: pointer;">
-            <option>Business Research</option>
-            <option>Software &amp; Tech</option>
-            <option>AI Tools &amp; Trends</option>
-            <option>Sales Intelligence</option>
-            <option>Marketing Research</option>
-            <option>Competition Analysis</option>
+            <option value="business">Business Research</option>
+            <option value="software">Software &amp; Tech</option>
+            <option value="ai">AI Tools &amp; Trends</option>
+            <option value="sales">Sales Intelligence</option>
+            <option value="marketing">Marketing Research</option>
+            <option value="competition">Competition Analysis</option>
           </select>
         </div>
 
@@ -1222,7 +1265,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="toggleSettings()">Cancel</button>
-        <button class="btn btn-primary" onclick="toggleSettings()">Save</button>
+        <button class="btn btn-primary" onclick="saveSettings()">Save</button>
       </div>
     </div>
   </div>
@@ -1230,12 +1273,6 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script>
-    function selectAgent(agent) {}
-    function toggleRouterPanel() {}
-    function runResearch() {}
-    function toggleSettings() {}
-    function showToast(message) {}
-  </script>
+  <script src="js/app.js"></script>
 </body>
 </html>

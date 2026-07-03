@@ -1,4 +1,18 @@
 <!DOCTYPE html>
+<!--
+  Research OS — Self-contained research dashboard powered by OpenRouter
+
+  Quick Start:
+  1. Open this file in any modern browser
+  2. Click Settings (sidebar) and paste your OpenRouter API key
+  3. Select a research agent, enter a query, click Run Research
+
+  Keyboard Shortcuts:
+  - Ctrl/Cmd + Enter  Run research
+  - Escape            Close panels and modals
+
+  Get an API key: https://openrouter.ai/keys
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -883,6 +897,113 @@
     animation: toast-in 0.3s ease;
   }
 
+  .toast-error {
+    border-color: rgba(248, 113, 113, 0.4);
+    background: #1a1218;
+    color: #fca5a5;
+  }
+
+  .toast-success {
+    border-color: rgba(74, 222, 128, 0.3);
+    background: #101a14;
+    color: #86efac;
+  }
+
+  .toast-info {
+    border-color: rgba(99, 102, 241, 0.3);
+    background: #12121a;
+    color: #a5b4fc;
+  }
+
+  .results-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .btn-sm {
+    padding: 5px 12px;
+    font-size: 0.75rem;
+  }
+
+  .results-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 180px;
+    text-align: center;
+  }
+
+  .results-error-icon { font-size: 2rem; }
+
+  .results-error-text {
+    color: #fca5a5;
+    font-size: 0.9rem;
+    max-width: 320px;
+    line-height: 1.5;
+  }
+
+  .results-area.has-error {
+    align-items: center;
+    justify-content: center;
+    border-color: rgba(248, 113, 113, 0.3);
+    background: rgba(248, 113, 113, 0.04);
+  }
+
+  .activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .activity-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .activity-time {
+    font-size: 0.68rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+  }
+
+  .activity-message {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  .activity-empty {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding: 24px;
+  }
+
+  .kbd-hint {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .kbd-hint kbd {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 1px 5px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
   @keyframes toast-in {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -988,7 +1109,7 @@
           <span class="nav-label">Settings</span>
         </div>
 
-        <div class="nav-item">
+        <div class="nav-item" onclick="toggleActivityLogs()">
           <span class="nav-icon">📋</span>
           <span class="nav-label">Activity Logs</span>
         </div>
@@ -1107,6 +1228,7 @@
           <div class="workspace-left">
             <div class="workspace-label">Research Query</div>
             <textarea class="query-textarea" id="query-input" placeholder="Enter your research question or topic…"></textarea>
+            <p class="kbd-hint">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run research</p>
             <div class="options-row">
               <div class="option-group">
                 <label for="model-select">Model</label>
@@ -1270,9 +1392,705 @@
     </div>
   </div>
 
+  <!-- Activity Logs Modal -->
+  <div class="modal-overlay" id="activity-modal" onclick="closeActivityOnOverlay(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">📋 Activity Logs</h2>
+        <button class="panel-close" onclick="toggleActivityLogs()" aria-label="Close activity logs">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="activity-list" id="activity-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="clearActivityLogs()">Clear Logs</button>
+        <button class="btn btn-primary" onclick="toggleActivityLogs()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="js/app.js"></script>
+  <script>
+/* Research OS — Application Logic */
+
+const STORAGE_KEYS = {
+  apiKey: 'openrouter_api_key',
+  defaultAgent: 'research_os_default_agent',
+  autoSave: 'research_os_auto_save',
+  systemPrompt: 'research_os_system_prompt',
+  currentModel: 'research_os_current_model',
+  results: 'research_os_results',
+  activity: 'research_os_activity'
+};
+
+const FALLBACK_MODELS = ['glm-flash', 'deepseek', 'glm', 'claude'];
+
+const AGENTS = {
+  business: {
+    icon: '💼',
+    title: 'Business Research',
+    subtitle: 'Market analysis, industry trends, and business intelligence',
+    systemPrompt: 'You are a business research analyst. Provide thorough market analysis, industry trends, competitive landscapes, and actionable business intelligence. Cite key data points and structure findings clearly.'
+  },
+  software: {
+    icon: '💻',
+    title: 'Software & Tech',
+    subtitle: 'Technology stack analysis, frameworks, and architecture research',
+    systemPrompt: 'You are a software and technology research specialist. Analyze tech stacks, compare frameworks, evaluate architectures, and deliver clear technical recommendations with pros and cons.'
+  },
+  ai: {
+    icon: '🤖',
+    title: 'AI Tools & Trends',
+    subtitle: 'AI model comparisons, tool evaluations, and emerging trends',
+    systemPrompt: 'You are an AI tools and trends researcher. Compare models and tools, evaluate capabilities, track emerging technologies, and summarize implications for practitioners.'
+  },
+  sales: {
+    icon: '📈',
+    title: 'Sales Intelligence',
+    subtitle: 'Lead research, prospect profiling, and pipeline strategy',
+    systemPrompt: 'You are a sales intelligence analyst. Research prospects, profile leads, analyze sales strategies, and provide actionable pipeline insights with clear next steps.'
+  },
+  marketing: {
+    icon: '🎯',
+    title: 'Marketing Research',
+    subtitle: 'Campaign analysis, audience insights, and brand positioning',
+    systemPrompt: 'You are a marketing research specialist. Analyze campaigns, audience segments, content strategies, and brand positioning with data-driven recommendations.'
+  },
+  competition: {
+    icon: '⚔️',
+    title: 'Competition Analysis',
+    subtitle: 'Competitor profiling, SWOT analysis, and strategic benchmarking',
+    systemPrompt: 'You are a competitive intelligence analyst. Profile competitors, conduct SWOT analysis, benchmark market positioning, and deliver strategic insights.'
+  }
+};
+
+const MODELS = {
+  auto: { label: 'Auto Router', openRouterId: null },
+  claude: { label: 'Claude Sonnet 4.6', openRouterId: 'anthropic/claude-sonnet-4' },
+  'claude-opus': { label: 'Claude Opus 4.5', openRouterId: 'anthropic/claude-opus-4' },
+  glm: { label: 'GLM 4.7', openRouterId: 'z-ai/glm-4.7' },
+  'glm-flash': { label: 'GLM 4.7 Flash', openRouterId: 'z-ai/glm-4.7-flash' },
+  deepseek: { label: 'DeepSeek V4', openRouterId: 'deepseek/deepseek-v3.2' }
+};
+
+const DEPTH_CONFIG = {
+  'Quick Scan': { maxTokens: 800, temperature: 0.5, autoModel: 'glm-flash' },
+  'Standard': { maxTokens: 1500, temperature: 0.6, autoModel: 'glm' },
+  'Deep Dive': { maxTokens: 3000, temperature: 0.7, autoModel: 'claude' },
+  'Comprehensive': { maxTokens: 6000, temperature: 0.7, autoModel: 'claude-opus' }
+};
+
+const FORMAT_INSTRUCTIONS = {
+  'Summary': 'Format the response as a concise executive summary (3–5 paragraphs).',
+  'Report': 'Format the response as a structured research report with clear sections and headings.',
+  'Bullet Points': 'Format the response as organized bullet points with sub-bullets where helpful.',
+  'Table': 'Format key findings in markdown tables where appropriate, with a brief intro and conclusion.'
+};
+
+const errorHandlers = {
+  401: { message: 'Invalid API key. Check Settings.', action: toggleSettings },
+  402: { message: 'Insufficient credits. Add funds at openrouter.ai', action: null },
+  429: { message: 'Rate limited. Switch to GLM Flash or DeepSeek.', action: null },
+  404: { message: 'Model unavailable. Retrying with fallback...', action: retryWithFallback },
+  500: { message: 'OpenRouter server error. Try again shortly.', action: null },
+  network: { message: 'Connection failed. Check internet.', action: null }
+};
+
+class ResearchError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.name = 'ResearchError';
+    this.status = status;
+  }
+}
+
+const state = {
+  currentAgent: localStorage.getItem(STORAGE_KEYS.defaultAgent) || 'business',
+  currentModel: localStorage.getItem(STORAGE_KEYS.currentModel) || 'auto',
+  apiKey: localStorage.getItem(STORAGE_KEYS.apiKey) || '',
+  autoSave: localStorage.getItem(STORAGE_KEYS.autoSave) !== 'false',
+  systemPrompt: localStorage.getItem(STORAGE_KEYS.systemPrompt) || '',
+  isResearching: false,
+  results: loadJSON(STORAGE_KEYS.results, []),
+  lastResult: null,
+  pendingQuery: null
+};
+
+let retryContext = null;
+
+function loadJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function persistState() {
+  if (state.autoSave) {
+    localStorage.setItem(STORAGE_KEYS.results, JSON.stringify(state.results));
+  }
+}
+
+function $(id) { return document.getElementById(id); }
+function $$(selector) { return document.querySelectorAll(selector); }
+
+function updateAgentUI() {
+  const agent = AGENTS[state.currentAgent];
+  if (!agent) return;
+
+  $('page-title').textContent = `${agent.icon} ${agent.title}`;
+  $('page-subtitle').textContent = agent.subtitle;
+
+  $$('.nav-item[data-agent]').forEach((el) => {
+    el.classList.toggle('active', el.dataset.agent === state.currentAgent);
+  });
+
+  $$('.agent-card[data-agent]').forEach((el) => {
+    el.classList.toggle('active', el.dataset.agent === state.currentAgent);
+  });
+}
+
+function updateModelUI() {
+  const model = MODELS[state.currentModel];
+  if (!model) return;
+
+  $('router-badge-label').textContent = model.label;
+  $('model-select').value = state.currentModel;
+
+  $$('.model-card[data-model]').forEach((el) => {
+    el.classList.toggle('selected', el.dataset.model === state.currentModel);
+  });
+}
+
+function updateConnectionStatus() {
+  const footer = $('connection-status');
+  const label = $('connection-label');
+  const connected = Boolean(state.apiKey);
+
+  footer.classList.toggle('disconnected', !connected);
+  label.textContent = connected ? 'OpenRouter Connected' : 'OpenRouter Not Connected';
+}
+
+function setResearching(active) {
+  state.isResearching = active;
+  const btn = $('btn-run');
+  const dots = $('loading-dots');
+  const placeholderText = $('results-placeholder-text');
+  const placeholderIcon = document.querySelector('.results-placeholder-icon');
+
+  if (!btn) return;
+
+  btn.disabled = active;
+  btn.textContent = active ? '⏳ Researching…' : '▶ Run Research';
+
+  if (dots && placeholderText) {
+    if (active) {
+      dots.style.display = 'flex';
+      placeholderText.textContent = 'Researching…';
+      if (placeholderIcon) placeholderIcon.style.display = 'none';
+    } else {
+      dots.style.display = 'none';
+      if (placeholderIcon) placeholderIcon.style.display = '';
+    }
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function showLoadingState() {
+  const area = $('results-area');
+  area.classList.remove('has-results', 'has-error');
+  area.innerHTML = `
+    <div class="results-placeholder" id="results-placeholder">
+      <span class="results-placeholder-icon" style="display:none">🔍</span>
+      <span id="results-placeholder-text">Researching…</span>
+      <div class="loading-dots" style="display:flex" id="loading-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>`;
+}
+function renderResults(entry) {
+  const area = $('results-area');
+  state.lastResult = entry || null;
+
+  if (!entry) {
+    area.classList.remove('has-results', 'has-error');
+    area.innerHTML = `
+      <div class="results-placeholder" id="results-placeholder">
+        <span class="results-placeholder-icon">🔍</span>
+        <span id="results-placeholder-text">Ready to Research</span>
+        <div class="loading-dots" style="display: none;" id="loading-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>`;
+    return;
+  }
+
+  area.classList.remove('has-error');
+  area.classList.add('has-results');
+  area.innerHTML = `
+    <div class="results-toolbar">
+      <button class="btn btn-sm btn-secondary" onclick="copyResults()">📋 Copy</button>
+      <button class="btn btn-sm btn-secondary" onclick="exportResults()">⬇ Export</button>
+    </div>
+    <div class="results-meta">
+      <span>Agent: <strong>${escapeHtml(AGENTS[entry.agent]?.title || entry.agent)}</strong></span>
+      <span>Model: <strong>${escapeHtml(entry.modelLabel)}</strong></span>
+      <span>Depth: <strong>${escapeHtml(entry.depth)}</strong></span>
+      <span>Time: <strong>${entry.duration}s</strong></span>
+    </div>
+    <div class="results-content">${escapeHtml(entry.content)}</div>`;
+}
+
+function renderError(message) {
+  const area = $('results-area');
+  area.classList.remove('has-results');
+  area.classList.add('has-error');
+  area.innerHTML = `
+    <div class="results-error">
+      <span class="results-error-icon">⚠️</span>
+      <p class="results-error-text">${escapeHtml(message)}</p>
+    </div>`;
+}
+
+function logActivity(message) {
+  const logs = loadJSON(STORAGE_KEYS.activity, []);
+  logs.unshift({ message, timestamp: new Date().toISOString() });
+  if (logs.length > 50) logs.length = 50;
+  localStorage.setItem(STORAGE_KEYS.activity, JSON.stringify(logs));
+}
+
+function selectAgent(agent) {
+  if (!AGENTS[agent] || state.isResearching) return;
+
+  state.currentAgent = agent;
+  updateAgentUI();
+
+  if (window.innerWidth <= 768) {
+    $('sidebar').classList.remove('open');
+  }
+
+  showToast(`Switched to ${AGENTS[agent].title}`);
+}
+
+function selectModel(modelId) {
+  if (!MODELS[modelId] || state.isResearching) return;
+
+  state.currentModel = modelId;
+  localStorage.setItem(STORAGE_KEYS.currentModel, modelId);
+  updateModelUI();
+  showToast(`Model set to ${MODELS[modelId].label}`);
+}
+
+function toggleRouterPanel() {
+  const panel = $('router-panel');
+  const overlay = $('router-overlay');
+  const isOpen = panel.classList.contains('open');
+
+  panel.classList.toggle('open', !isOpen);
+  overlay.classList.toggle('open', !isOpen);
+}
+
+function toggleSettings() {
+  const modal = $('settings-modal');
+  const isOpen = modal.classList.contains('open');
+
+  if (!isOpen) {
+    $('api-key').value = state.apiKey;
+    $('default-agent').value = state.currentAgent;
+    $('auto-save').checked = state.autoSave;
+    $('system-prompt').value = state.systemPrompt;
+  }
+
+  modal.classList.toggle('open', !isOpen);
+}
+
+function closeSettingsOnOverlay(event) {
+  if (event.target.id === 'settings-modal') toggleSettings();
+}
+
+function saveSettings() {
+  const apiKey = $('api-key').value.trim();
+  const defaultAgent = $('default-agent').value;
+  const autoSave = $('auto-save').checked;
+  const systemPrompt = $('system-prompt').value.trim();
+
+  state.apiKey = apiKey;
+  state.autoSave = autoSave;
+  state.systemPrompt = systemPrompt;
+
+  localStorage.setItem(STORAGE_KEYS.apiKey, apiKey);
+  localStorage.setItem(STORAGE_KEYS.defaultAgent, defaultAgent);
+  localStorage.setItem(STORAGE_KEYS.autoSave, String(autoSave));
+  localStorage.setItem(STORAGE_KEYS.systemPrompt, systemPrompt);
+
+  if (defaultAgent !== state.currentAgent) {
+    state.currentAgent = defaultAgent;
+    updateAgentUI();
+  }
+
+  updateConnectionStatus();
+  toggleSettings();
+  showToast('Settings saved', 3500, 'success');
+  logActivity('Settings updated');
+}
+
+function toggleActivityLogs() {
+  const modal = $('activity-modal');
+  const isOpen = modal.classList.contains('open');
+
+  if (!isOpen) renderActivityLogs();
+  modal.classList.toggle('open', !isOpen);
+}
+
+function closeActivityOnOverlay(event) {
+  if (event.target.id === 'activity-modal') toggleActivityLogs();
+}
+
+function renderActivityLogs() {
+  const logs = loadJSON(STORAGE_KEYS.activity, []);
+  const list = $('activity-list');
+
+  if (!logs.length) {
+    list.innerHTML = '<p class="activity-empty">No activity yet. Run your first research query!</p>';
+    return;
+  }
+
+  list.innerHTML = logs.map((log) => `
+    <div class="activity-item">
+      <span class="activity-time">${formatTimestamp(log.timestamp)}</span>
+      <span class="activity-message">${escapeHtml(log.message)}</span>
+    </div>`).join('');
+}
+
+function formatTimestamp(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function clearActivityLogs() {
+  localStorage.setItem(STORAGE_KEYS.activity, JSON.stringify([]));
+  renderActivityLogs();
+  showToast('Activity logs cleared');
+}
+
+function copyResults() {
+  if (!state.lastResult?.content) {
+    showToast('No results to copy', 3000, 'error');
+    return;
+  }
+
+  navigator.clipboard.writeText(state.lastResult.content).then(() => {
+    showToast('Copied to clipboard', 3000, 'success');
+    logActivity('Results copied to clipboard');
+  }).catch(() => showToast('Failed to copy', 3000, 'error'));
+}
+
+function exportResults() {
+  if (!state.lastResult) {
+    showToast('No results to export', 3000, 'error');
+    return;
+  }
+
+  const entry = state.lastResult;
+  const text = [
+    `# Research OS Report`,
+    ``,
+    `Agent: ${AGENTS[entry.agent]?.title || entry.agent}`,
+    `Model: ${entry.modelLabel}`,
+    `Depth: ${entry.depth}`,
+    `Format: ${entry.format}`,
+    `Duration: ${entry.duration}s`,
+    `Date: ${entry.timestamp}`,
+    ``,
+    `## Query`,
+    entry.query,
+    ``,
+    `## Results`,
+    entry.content
+  ].join('\n');
+
+  const blob = new Blob([text], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `research-${entry.agent}-${Date.now()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showToast('Report exported', 3000, 'success');
+  logActivity('Results exported');
+}
+
+function resolveModel() {
+  if (state.currentModel !== 'auto') return state.currentModel;
+  const depthKey = $('depth-select').value;
+  return DEPTH_CONFIG[depthKey]?.autoModel || 'glm';
+}
+
+function getOpenRouterModelId(modelKey) {
+  return MODELS[modelKey]?.openRouterId || MODELS.glm.openRouterId;
+}
+
+function buildSystemPrompt() {
+  const agent = AGENTS[state.currentAgent];
+  const parts = [];
+
+  if (state.systemPrompt) parts.push(state.systemPrompt);
+  if (agent?.systemPrompt) parts.push(agent.systemPrompt);
+
+  const format = $('format-select').value;
+  if (FORMAT_INSTRUCTIONS[format]) parts.push(FORMAT_INSTRUCTIONS[format]);
+
+  return parts.join('\n\n');
+}
+
+function buildUserPrompt(query) {
+  const depth = $('depth-select').value;
+  const format = $('format-select').value;
+
+  return `Research Query: ${query}
+
+Depth: ${depth}
+Output Format: ${format}
+
+Provide a thorough, well-researched response. Be specific, analytical, and actionable.`;
+}
+
+async function callOpenRouter(query, modelOverride) {
+  const depthKey = $('depth-select').value;
+  const depthConfig = DEPTH_CONFIG[depthKey] || DEPTH_CONFIG['Standard'];
+  const resolvedModel = modelOverride || resolveModel();
+  const modelId = getOpenRouterModelId(resolvedModel);
+
+  let response;
+
+  try {
+    response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'Research OS'
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: [
+          { role: 'system', content: buildSystemPrompt() },
+          { role: 'user', content: buildUserPrompt(query) }
+        ],
+        max_tokens: depthConfig.maxTokens,
+        temperature: depthConfig.temperature
+      })
+    });
+  } catch {
+    throw new ResearchError('network', 'Connection failed');
+  }
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new ResearchError(response.status, err.error?.message || `API error ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new ResearchError(500, 'No response content received');
+  }
+
+  return {
+    content,
+    modelKey: resolvedModel,
+    modelLabel: MODELS[resolvedModel]?.label || resolvedModel,
+    modelId
+  };
+}
+
+function completeResearch(query, result, startTime) {
+  const duration = ((performance.now() - startTime) / 1000).toFixed(1);
+
+  const entry = {
+    id: Date.now(),
+    agent: state.currentAgent,
+    query,
+    content: result.content,
+    model: result.modelKey,
+    modelLabel: result.modelLabel,
+    modelId: result.modelId,
+    depth: $('depth-select').value,
+    format: $('format-select').value,
+    duration,
+    timestamp: new Date().toISOString()
+  };
+
+  state.results.unshift(entry);
+  if (state.results.length > 20) state.results.length = 20;
+  persistState();
+  renderResults(entry);
+
+  logActivity(`Research completed: ${AGENTS[state.currentAgent].title} — ${result.modelLabel}`);
+  showToast(`Research complete (${duration}s)`, 3500, 'success');
+}
+
+async function retryWithFallback() {
+  if (!retryContext) return;
+
+  const { query, startTime, failedModel } = retryContext;
+  const startIdx = Math.max(0, FALLBACK_MODELS.indexOf(failedModel) + 1);
+
+  for (let i = startIdx; i < FALLBACK_MODELS.length; i++) {
+    const fallback = FALLBACK_MODELS[i];
+    showToast(`Retrying with ${MODELS[fallback].label}…`, 3000, 'info');
+
+    try {
+      const result = await callOpenRouter(query, fallback);
+      retryContext = null;
+      completeResearch(query, result, startTime);
+      setResearching(false);
+      return;
+    } catch (err) {
+      if (!(err instanceof ResearchError) || err.status !== 404) {
+        retryContext = null;
+        throw err;
+      }
+    }
+  }
+
+  retryContext = null;
+  throw new ResearchError(404, 'All fallback models unavailable');
+}
+
+async function handleResearchError(err) {
+  const status = err instanceof ResearchError ? err.status : 'network';
+  const handler = errorHandlers[status] || { message: err.message || 'Research failed', action: null };
+
+  if (handler.action === retryWithFallback) {
+    showToast(handler.message, 3000, 'info');
+    logActivity(handler.message);
+    try {
+      await retryWithFallback();
+      return;
+    } catch (retryErr) {
+      setResearching(false);
+      const msg = retryErr.message || 'All fallback models unavailable';
+      renderError(msg);
+      showToast(msg, 5000, 'error');
+      logActivity(`Research failed: ${msg}`);
+      return;
+    }
+  }
+
+  setResearching(false);
+  renderError(handler.message);
+  showToast(handler.message, 5000, 'error');
+  logActivity(`Research failed: ${handler.message}`);
+
+  if (typeof handler.action === 'function') {
+    handler.action();
+  }
+}
+
+async function runResearch() {
+  if (state.isResearching) return;
+
+  const query = $('query-input').value.trim();
+
+  if (!query) {
+    showToast('Please enter a research query', 3000, 'error');
+    return;
+  }
+
+  if (!state.apiKey) {
+    showToast('Add your OpenRouter API key in Settings', 4000, 'error');
+    toggleSettings();
+    return;
+  }
+
+  const startTime = performance.now();
+  retryContext = { query, startTime, failedModel: resolveModel() };
+  setResearching(true);
+  showLoadingState();
+
+  try {
+    const result = await callOpenRouter(query);
+    retryContext = null;
+    completeResearch(query, result, startTime);
+  } catch (err) {
+    console.error('Research error:', err);
+    if (err instanceof ResearchError && err.status === 404) {
+      retryContext.failedModel = resolveModel();
+    }
+    await handleResearchError(err);
+    return;
+  }
+
+  setResearching(false);
+}
+
+function showToast(message, duration = 3500, type = 'info') {
+  const container = $('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    toast.style.transition = 'opacity 0.3s, transform 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+function initEventListeners() {
+  $('model-select').addEventListener('change', (e) => selectModel(e.target.value));
+
+  $('query-input').addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      runResearch();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if ($('router-panel').classList.contains('open')) toggleRouterPanel();
+      if ($('settings-modal').classList.contains('open')) toggleSettings();
+      if ($('activity-modal').classList.contains('open')) toggleActivityLogs();
+    }
+  });
+
+  $('router-panel').addEventListener('click', (e) => e.stopPropagation());
+}
+
+function init() {
+  if (!AGENTS[state.currentAgent]) state.currentAgent = 'business';
+  if (!MODELS[state.currentModel]) state.currentModel = 'auto';
+
+  updateAgentUI();
+  updateModelUI();
+  updateConnectionStatus();
+  initEventListeners();
+
+  if (state.results.length > 0) {
+    renderResults(state.results[0]);
+  }
+
+  logActivity('Research OS started');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+  </script>
 </body>
 </html>

@@ -142,6 +142,8 @@
   .model-name{font-size:.82rem;font-weight:600}
   .model-price{font-family:var(--font-mono);font-size:.68rem;color:var(--text-muted)}
   .model-desc{font-size:.72rem;color:var(--text-dim);margin-top:2px}
+  .model-group-label{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);padding:10px 0 4px;margin-top:4px}
+  .model-group-label:first-child{margin-top:0;padding-top:0}
   .btn{padding:8px 16px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:var(--font-ui);border:none}
   .btn-secondary{background:transparent;border:1px solid var(--border);color:var(--text-muted)}
   .btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
@@ -347,16 +349,22 @@ const AGENTS={
   competition:{icon:'⚔️',title:'Competition Analysis',desc:'Competitors & SWOT',color:'var(--competition)',prompt:'You are a competitive intelligence analyst. Profile competitors and deliver strategic benchmarking.'}
 };
 const MODELS={
-  auto:{label:'Auto Router',id:null},
-  claude:{label:'Claude Sonnet 4.6',id:'anthropic/claude-sonnet-4'},
-  'claude-opus':{label:'Claude Opus 4.5',id:'anthropic/claude-opus-4'},
-  glm:{label:'GLM 4.7',id:'z-ai/glm-4.7'},
-  'glm-flash':{label:'GLM 4.7 Flash',id:'z-ai/glm-4.7-flash'},
-  deepseek:{label:'DeepSeek V4',id:'deepseek/deepseek-v3.2'}
+  auto:{label:'Auto Router',id:null,group:'Router',desc:'Auto-select by research depth'},
+  claude:{label:'Claude Sonnet 4.6',id:'anthropic/claude-sonnet-4',group:'Anthropic',desc:'Balanced reasoning · moderate cost'},
+  'claude-opus':{label:'Claude Opus 4.5',id:'anthropic/claude-opus-4',group:'Anthropic',desc:'Top-tier deep analysis'},
+  'gpt-4o':{label:'GPT-4o',id:'openai/gpt-4o',group:'OpenAI',desc:'OpenAI flagship · multimodal'},
+  'gpt-4o-mini':{label:'GPT-4o Mini',id:'openai/gpt-4o-mini',group:'OpenAI',desc:'Fast & affordable OpenAI'},
+  kimi:{label:'Kimi K2',id:'moonshotai/kimi-k2',group:'Kimi',desc:'Moonshot AI · 128K context · agentic'},
+  'kimi-latest':{label:'Kimi Latest',id:'~moonshotai/kimi-latest',group:'Kimi',desc:'Always routes to newest Kimi'},
+  gemini:{label:'Gemini 2.5 Flash',id:'google/gemini-2.5-flash-preview',group:'Google',desc:'Fast Google multimodal'},
+  glm:{label:'GLM 4.7',id:'z-ai/glm-4.7',group:'Z.AI',desc:'Cost-effective multilingual'},
+  'glm-flash':{label:'GLM 4.7 Flash',id:'z-ai/glm-4.7-flash',group:'Z.AI',desc:'Free tier · quick scans'},
+  deepseek:{label:'DeepSeek V4',id:'deepseek/deepseek-v3.2',group:'DeepSeek',desc:'Ultra-affordable technical research'},
+  llama:{label:'Llama 3.3 70B',id:'meta-llama/llama-3.3-70b-instruct',group:'Meta',desc:'Open-source · strong general tasks'}
 };
 const DEPTH={'Quick Scan':{tokens:800,temp:.5,model:'glm-flash'},'Standard':{tokens:1500,temp:.6,model:'glm'},'Deep Dive':{tokens:3000,temp:.7,model:'claude'},'Comprehensive':{tokens:6000,temp:.7,model:'claude-opus'}};
 const FORMATS={'Summary':'Format as a concise executive summary.','Report':'Format as a structured report with headings.','Bullet Points':'Format as organized bullet points.','Table':'Use markdown tables where appropriate.'};
-const FALLBACKS=['glm-flash','deepseek','glm','claude'];
+const FALLBACKS=['glm-flash','deepseek','glm','gpt-4o-mini','kimi','claude'];
 const errorHandlers={
   401:{msg:'Invalid API key. Check Settings.',action:()=>toggleSettings()},
   402:{msg:'Insufficient credits. Add funds at openrouter.ai'},
@@ -663,11 +671,18 @@ function toggleRouterPanel(){
   $('router-overlay').classList.toggle('open');
 }
 function renderModelCards(){
-  $('model-cards').innerHTML=Object.entries(MODELS).map(([k,m])=>`
+  const groups={};
+  Object.entries(MODELS).forEach(([k,m])=>{
+    const g=m.group||'Other';
+    (groups[g]=groups[g]||[]).push([k,m]);
+  });
+  $('model-cards').innerHTML=Object.entries(groups).map(([g,items])=>`
+    <div class="model-group-label">${g}</div>
+    ${items.map(([k,m])=>`
     <div class="model-card ${k===state.model?'selected':''}" onclick="selectModel('${k}')">
       <div class="model-radio"></div>
-      <div><div class="model-name">${m.label}</div><div class="model-desc">${m.id||'Auto-select by depth'}</div></div>
-    </div>`).join('');
+      <div><div class="model-name">${m.label}</div><div class="model-desc">${m.desc||m.id||'Auto-select'}</div></div>
+    </div>`).join('')}`).join('');
 }
 
 /* ── Settings ── */

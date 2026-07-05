@@ -103,6 +103,16 @@
   .btn-send{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity var(--transition)}
   .btn-send:hover{opacity:.9}
   .btn-send:disabled{opacity:.4;cursor:not-allowed}
+  .btn-attach{width:36px;height:36px;border-radius:8px;background:var(--bg);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color var(--transition)}
+  .btn-attach:hover{border-color:#3a3a50;color:var(--text)}
+  .attachment-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .attachment-bar:empty{display:none}
+  .attachment-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 8px 4px 6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:.7rem;color:var(--text-muted);max-width:200px}
+  .attachment-chip .chip-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .attachment-chip button{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:.85rem;padding:0 2px;line-height:1}
+  .attachment-chip button:hover{color:#fca5a5}
+  .msg-attachments{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+  .msg-attach-tag{font-size:.65rem;padding:2px 7px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:4px;color:var(--text-dim)}
   .chat-hint{font-size:.68rem;color:var(--text-dim);margin-top:6px;text-align:center}
 
   /* Screen 3 — Agent Panel */
@@ -260,11 +270,16 @@
       </div>
     </div>
     <div class="chat-input-bar">
+      <div class="attachment-bar" id="attachment-bar"></div>
       <div class="chat-input-wrap">
+        <button class="btn-attach" onclick="pickFiles()" title="Attach files">📎</button>
+        <button class="btn-attach" onclick="pickFolder()" title="Attach folder">📁</button>
         <textarea class="chat-input" id="chat-input" rows="1" placeholder="Message your research agent…"></textarea>
         <button class="btn-send" id="btn-send" onclick="sendMessage()" title="Send">➤</button>
       </div>
-      <p class="chat-hint">Enter to send · Shift+Enter for new line</p>
+      <p class="chat-hint">📎 Files · 📁 Folder · Enter to send · Max 20 files, 512KB each</p>
+      <input type="file" id="file-input" multiple hidden accept=".txt,.md,.markdown,.json,.csv,.js,.ts,.jsx,.tsx,.py,.html,.css,.xml,.yaml,.yml,.log,.sql,.pdf,.png,.jpg,.jpeg,.gif,.webp,.bmp,text/*,image/*">
+      <input type="file" id="folder-input" webkitdirectory directory multiple hidden>
     </div>
   </main>
 
@@ -410,6 +425,13 @@ const errorHandlers={
 let state={user:null,apiKey:'',model:'auto',systemPrompt:'',autoSave:true,projects:[],currentProjectId:null,currentChatId:null,busy:false};
 let retryCtx=null;
 let moveChatId=null;
+let pendingAttachments=[];
+
+const TEXT_EXT=/\.(txt|md|markdown|json|csv|js|ts|jsx|tsx|py|html|css|xml|yaml|yml|log|sql|rs|go|java|c|cpp|h|sh|env|toml|ini|rtf)$/i;
+const IMAGE_EXT=/\.(png|jpg|jpeg|gif|webp|bmp)$/i;
+const MAX_FILE=512*1024;
+const MAX_FILES=20;
+const MAX_TEXT_SLICE=40000;
 
 function $(id){return document.getElementById(id)}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -419,7 +441,16 @@ function loadData(){
   try{return JSON.parse(localStorage.getItem(SK.data))||null}catch{return null}
 }
 function saveData(){
-  if(state.autoSave)localStorage.setItem(SK.data,JSON.stringify({projects:state.projects,systemPrompt:state.systemPrompt,autoSave:state.autoSave}));
+  if(state.autoSave){
+    const clean=state.projects.map(p=>({
+      ...p,
+      chats:p.chats.map(ch=>({
+        ...ch,
+        messages:ch.messages.map(m=>{const{ _images,...rest}=m;return rest})
+      }))
+    }));
+    localStorage.setItem(SK.data,JSON.stringify({projects:clean,systemPrompt:state.systemPrompt,autoSave:state.autoSave}));
+  }
 }
 function getChat(){
   const p=state.projects.find(x=>x.id===state.currentProjectId);
@@ -618,11 +649,14 @@ function renderMessages(){
     el.innerHTML=`<div class="chat-empty" id="chat-empty"><span class="icon">🔍</span><p>Start a conversation with your research agent.<br>Ask anything — market trends, tech stacks, competitors…</p></div>`;
     updateChatHeader();return;
   }
-  el.innerHTML=c.messages.map(m=>`
-    <div class="msg ${m.role}">
+  el.innerHTML=c.messages.map(m=>{
+    const attachHtml=m.attachments?.length?`<div class="msg-attachments">${m.attachments.map(a=>`<span class="msg-attach-tag">${a.type==='image'?'🖼':'📄'} ${esc(a.name)}</span>`).join('')}</div>`:'';
+    return `<div class="msg ${m.role}">
+      ${attachHtml}
       <div class="msg-bubble">${esc(m.content)}</div>
       <div class="msg-meta">${m.role==='assistant'?(m.model?m.model+' · ':'')+formatTime(m.ts):formatTime(m.ts)}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   el.scrollTop=el.scrollHeight;
   updateChatHeader();
 }
@@ -635,18 +669,101 @@ function showTyping(){
 }
 function hideTyping(){const t=$('typing');if(t)t.remove()}
 
+function pickFiles(){$('file-input').click()}
+function pickFolder(){$('folder-input').click()}
+
+function readAsText(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsText(file)})}
+function readAsDataURL(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
+
+async function processFiles(fileList,isFolder){
+  const files=Array.from(fileList||[]);
+  let added=0;
+  for(const file of files){
+    if(pendingAttachments.length>=MAX_FILES){showToast(`Max ${MAX_FILES} attachments`,'error');break}
+    if(file.size>MAX_FILE){showToast(`${file.name} exceeds 512KB`,'error');continue}
+    const name=isFolder?(file.webkitRelativePath||file.name):file.name;
+    try{
+      if(IMAGE_EXT.test(file.name)||file.type.startsWith('image/')){
+        const dataUrl=await readAsDataURL(file);
+        pendingAttachments.push({id:uid(),name,type:'image',dataUrl,size:file.size});
+        added++;
+      }else if(TEXT_EXT.test(file.name)||file.type.startsWith('text/')||file.type==='application/json'){
+        const text=await readAsText(file);
+        pendingAttachments.push({id:uid(),name,type:'text',text,size:file.size});
+        added++;
+      }else{
+        showToast(`Skipped ${name} — use text, code, or image files`,'error');
+      }
+    }catch{showToast(`Could not read ${name}`,'error')}
+  }
+  if(added)renderAttachmentChips();
+}
+
+function renderAttachmentChips(){
+  const bar=$('attachment-bar');
+  if(!pendingAttachments.length){bar.innerHTML='';return}
+  bar.innerHTML=pendingAttachments.map(a=>`
+    <span class="attachment-chip">
+      <span>${a.type==='image'?'🖼':'📄'}</span>
+      <span class="chip-name" title="${esc(a.name)}">${esc(a.name)}</span>
+      <button onclick="removeAttachment('${a.id}')" title="Remove">✕</button>
+    </span>`).join('');
+}
+
+function removeAttachment(id){
+  pendingAttachments=pendingAttachments.filter(a=>a.id!==id);
+  renderAttachmentChips();
+}
+
+function clearAttachments(){
+  pendingAttachments=[];
+  renderAttachmentChips();
+}
+
+function buildMessagePayload(text,attachments){
+  const textFiles=attachments.filter(a=>a.type==='text');
+  const images=attachments.filter(a=>a.type==='image');
+  let fullText=text||'';
+  if(textFiles.length){
+    fullText+=(fullText?'\n\n':'')+'--- Attached Files ---';
+    textFiles.forEach(a=>{
+      const body=a.text.length>MAX_TEXT_SLICE?a.text.slice(0,MAX_TEXT_SLICE)+'\n…[truncated]':a.text;
+      fullText+=`\n\n### ${a.name}\n\`\`\`\n${body}\n\`\`\``;
+    });
+  }
+  const display=text||(images.length?`Analyze the attached image${images.length>1?'s':''}.`:'See attached files.');
+  const attachMeta=attachments.map(a=>({name:a.name,type:a.type}));
+  const imageUrls=images.map(a=>a.dataUrl);
+  return{display,fullText:fullText||display,attachments:attachMeta,images:imageUrls};
+}
+
+function messageToAPI(m){
+  if(m.role!=='user'||!m._images?.length){
+    return{role:m.role,content:m.fullContent||m.content};
+  }
+  const parts=[{type:'text',text:m.fullContent||m.content||'Analyze attached images.'}];
+  m._images.forEach(url=>parts.push({type:'image_url',image_url:{url}}));
+  return{role:'user',content:parts};
+}
+
 async function sendMessage(){
   if(state.busy)return;
   const input=$('chat-input');
   const text=input.value.trim();
-  if(!text){showToast('Type a message','error');return}
+  if(!text&&!pendingAttachments.length){showToast('Type a message or attach files','error');return}
   let c=getChat();
   if(!c)newChat(),c=getChat();
-  c.messages.push({role:'user',content:text,ts:Date.now()});
-  if(c.title==='New Chat')c.title=text.slice(0,45)+(text.length>45?'…':'');
+  const payload=buildMessagePayload(text,[...pendingAttachments]);
+  const msg={role:'user',content:payload.display,fullContent:payload.fullText,attachments:payload.attachments,_images:payload.images,ts:Date.now()};
+  c.messages.push(msg);
+  if(c.title==='New Chat'){
+    const titleSrc=text||payload.attachments[0]?.name||'Attached files';
+    c.title=titleSrc.slice(0,45)+(titleSrc.length>45?'…':'');
+  }
   c.depth=$('depth-select').value;
   c.format=$('format-select').value;
   input.value='';input.style.height='auto';
+  clearAttachments();
   renderMessages();saveData();
   state.busy=true;$('btn-send').disabled=true;
   showTyping();
@@ -709,7 +826,7 @@ function buildPrompt(agent){
 async function callAPI(chat,modelKey){
   const d=DEPTH[chat.depth||$('depth-select').value]||DEPTH['Standard'];
   const modelId=MODELS[modelKey]?.id||MODELS.glm.id;
-  const messages=[{role:'system',content:buildPrompt(chat.agent)},...chat.messages.map(m=>({role:m.role,content:m.content}))];
+  const messages=[{role:'system',content:buildPrompt(chat.agent)},...chat.messages.map(m=>messageToAPI(m))];
   let res;
   try{
     res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
@@ -865,6 +982,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
   $('login-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('login-key').focus()});
   $('login-key').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin()});
+  $('file-input').addEventListener('change',e=>processFiles(e.target.files,false));
+  $('folder-input').addEventListener('change',e=>processFiles(e.target.files,true));
   checkSession();
 });
 </script>

@@ -71,6 +71,9 @@
   .chat-header-info{flex:1;min-width:0}
   .chat-header-title{font-size:1rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .chat-header-sub{font-size:.75rem;color:var(--text-muted)}
+  .chat-header-actions{display:flex;gap:6px;flex-shrink:0}
+  .chat-header-btn{background:var(--bg);border:1px solid var(--border);color:var(--text-muted);padding:5px 10px;border-radius:6px;font-size:.72rem;cursor:pointer;font-family:var(--font-ui);transition:border-color var(--transition)}
+  .chat-header-btn:hover{border-color:#3a3a50;color:var(--text)}
   .chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
   .chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-dim);gap:12px;padding:40px;text-align:center}
   .chat-empty .icon{font-size:3rem;opacity:.3}
@@ -196,7 +199,7 @@
       <input class="form-input" id="login-key" type="password" placeholder="sk-or-…" autocomplete="off">
     </div>
     <button class="btn-login" onclick="handleLogin()">Launch Dashboard →</button>
-    <p class="login-hint">Get a free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a></p>
+    <p class="login-hint">Press Enter to launch · Get a free key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a></p>
   </div>
 </div>
 
@@ -236,6 +239,9 @@
       <div class="chat-header-info">
         <div class="chat-header-title" id="chat-title">New Chat</div>
         <div class="chat-header-sub" id="chat-subtitle">Business Research · Auto Router</div>
+      </div>
+      <div class="chat-header-actions">
+        <button class="chat-header-btn" onclick="exportChat()" title="Export chat">⬇ Export</button>
       </div>
     </header>
     <div class="chat-messages" id="chat-messages">
@@ -325,6 +331,13 @@
 
 <script>
 const SK={session:'ros_session',data:'ros_data',model:'ros_model'};
+const DEFAULT_PROMPT=`You are Ultimate AI Researcher & Builder — a senior research analyst, AI specialist, and strategic advisor.
+
+Principles:
+- Research thoroughly before assuming. Distinguish verified facts from opinions.
+- Be specific, analytical, and actionable. Structure findings clearly.
+- Recommend practical next steps, not just answers.
+- Never invent sources, prices, or features. State uncertainty plainly.`;
 const AGENTS={
   business:{icon:'💼',title:'Business Research',desc:'Market analysis & intelligence',color:'var(--business)',prompt:'You are a business research analyst. Provide thorough market analysis, industry trends, and actionable business intelligence.'},
   software:{icon:'💻',title:'Software & Tech',desc:'Tech stacks & architecture',color:'var(--software)',prompt:'You are a software research specialist. Analyze tech stacks, compare frameworks, and deliver clear technical recommendations.'},
@@ -384,6 +397,7 @@ function handleLogin(){
   localStorage.setItem('openrouter_api_key',key);
   const saved=loadData();
   if(saved){state.projects=saved.projects||[];state.systemPrompt=saved.systemPrompt||'';state.autoSave=saved.autoSave!==false}
+  if(!state.systemPrompt)state.systemPrompt=DEFAULT_PROMPT;
   if(!state.projects.length){const pid=uid();state.projects=[{id:pid,name:'My Research',chats:[]}];state.currentProjectId=pid}
   else state.currentProjectId=state.projects[0].id;
   state.model=localStorage.getItem(SK.model)||'auto';
@@ -676,6 +690,20 @@ function saveSettings(){
   showToast('Settings saved','success');
 }
 
+function exportChat(){
+  const c=getChat();
+  if(!c||!c.messages.length){showToast('No messages to export','error');return}
+  const a=AGENTS[c.agent];
+  const lines=[`# ${c.title}`,``,`**Agent:** ${a?.title||c.agent}`,`**Model:** ${MODELS[c.model||state.model]?.label||'Auto Router'}`,`**Exported:** ${new Date().toLocaleString()}`,'','---',''];
+  c.messages.forEach(m=>lines.push(`### ${m.role==='user'?'You':'Agent'}${m.model?' ('+m.model+')':''}\n\n${m.content}\n`));
+  const blob=new Blob([lines.join('\n')],{type:'text/markdown'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;link.download=`chat-${Date.now()}.md`;link.click();
+  URL.revokeObjectURL(url);
+  showToast('Chat exported','success');
+}
+
 /* ── Mobile ── */
 function switchMobileView(view){
   const app=$('app');
@@ -707,6 +735,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){toggleRouterPanel();$('settings-modal').classList.remove('open')}
   });
+  $('login-name').addEventListener('keydown',e=>{if(e.key==='Enter')$('login-key').focus()});
+  $('login-key').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin()});
   checkSession();
 });
 </script>

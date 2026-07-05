@@ -1,73 +1,49 @@
 # Research OS
 
-A self-contained research dashboard powered by [OpenRouter](https://openrouter.ai). Six specialized research agents, intelligent model routing, and a polished dark-theme UI — all in a single HTML file.
+Live AI research dashboard with login, 3-screen chat UI, and OpenRouter integration.
+
+## Live URL
+
+**https://iteekdeveloper056.github.io/RESEARCH-OS/research-os/**
+
+(Also available at repo root — redirects automatically)
+
+## 3-Screen UI
+
+| Screen | Panel | Contents |
+|---|---|---|
+| **Screen 1** | Left sidebar | Menu, Projects, Chats |
+| **Screen 2** | Center | Chat messages + message input bar |
+| **Screen 3** | Right panel | Active agent, model router, depth/format options |
+
+On mobile, use the bottom tab bar to switch between screens.
 
 ## Quick Start
 
-1. Open `research-os/index.html` in any modern browser
-2. Go to **Settings** and paste your [OpenRouter API key](https://openrouter.ai/keys)
-3. Select a research agent, enter a query, and click **▶ Run Research**
+1. Open the live URL (or `research-os/index.html` locally)
+2. Enter your name and [OpenRouter API key](https://openrouter.ai/keys)
+3. Click **Launch Dashboard**
+4. Select an agent on Screen 3, type a message on Screen 2, press Enter
 
-No build step, no server required.
+## Local Development
+
+```bash
+python3 -m http.server 8080
+# Open http://localhost:8080/research-os/
+```
 
 ## Features
 
-- **6 Research Agents** — Business, Software & Tech, AI Tools, Sales, Marketing, Competition
-- **Model Router** — Auto Router or manual selection (Claude, GLM, DeepSeek)
-- **Depth & Format** — Quick Scan through Comprehensive; Summary, Report, Bullets, or Table output
-- **Error Handling** — Specific messages for auth, credits, rate limits, model unavailability (with automatic fallback), and network errors
-- **Activity Logs** — Track research runs and settings changes
-- **Copy & Export** — Copy results to clipboard or export as Markdown
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|---|---|
-| `Ctrl` / `Cmd` + `Enter` | Run research |
-| `Escape` | Close panels and modals |
-
-## Auto Router
-
-When **Auto Router** is selected, the model is chosen by research depth:
-
-| Depth | Model |
-|---|---|
-| Quick Scan | GLM 4.7 Flash |
-| Standard | GLM 4.7 |
-| Deep Dive | Claude Sonnet 4.6 |
-| Comprehensive | Claude Opus 4.5 |
-
-On model unavailability (404), Research OS automatically retries with fallback models: GLM Flash → DeepSeek → GLM → Claude Sonnet.
-
-## Error Handling
-
-| Code | Message | Action |
-|---|---|---|
-| 401 | Invalid API key | Opens Settings |
-| 402 | Insufficient credits | — |
-| 429 | Rate limited | — |
-| 404 | Model unavailable | Auto-retry with fallback |
-| 500 | Server error | — |
-| Network | Connection failed | — |
-
-## Local Storage
-
-Settings and results are persisted in the browser:
-
-- `openrouter_api_key` — API key
-- `research_os_default_agent` — Default agent
-- `research_os_current_model` — Selected model
-- `research_os_system_prompt` — Global system prompt
-- `research_os_results` — Recent results (up to 20)
-- `research_os_activity` — Activity log (up to 50 entries)
+- Login dashboard with session persistence
+- Projects & chat history (localStorage)
+- 6 research agents with specialized prompts
+- Model router with auto-fallback on errors
+- Mobile-responsive 3-screen layout
 
 ## File Structure
 
 ```
-research-os/
-└── index.html    # Complete self-contained app (HTML + CSS + JS)
+index.html              → Redirects to research-os/
+research-os/index.html  → Complete self-contained app
+.github/workflows/      → GitHub Pages deployment
 ```
-
-## License
-
-MIT

@@ -360,11 +360,19 @@ const MODELS={
   glm:{label:'GLM 4.7',id:'z-ai/glm-4.7',group:'Z.AI',desc:'Cost-effective multilingual'},
   'glm-flash':{label:'GLM 4.7 Flash',id:'z-ai/glm-4.7-flash',group:'Z.AI',desc:'Free tier · quick scans'},
   deepseek:{label:'DeepSeek V4',id:'deepseek/deepseek-v3.2',group:'DeepSeek',desc:'Ultra-affordable technical research'},
-  llama:{label:'Llama 3.3 70B',id:'meta-llama/llama-3.3-70b-instruct',group:'Meta',desc:'Open-source · strong general tasks'}
+  llama:{label:'Llama 3.3 70B',id:'meta-llama/llama-3.3-70b-instruct',group:'Meta',desc:'Open-source · strong general tasks'},
+  'minimax-m3':{label:'MiniMax M3',id:'minimax/minimax-m3',group:'MiniMax',desc:'Flagship · 1M context · multimodal agentic'},
+  'minimax-m2.7':{label:'MiniMax M2.7',id:'minimax/minimax-m2.7',group:'MiniMax',desc:'Latest · multi-agent productivity · 205K'},
+  'minimax-m2.5':{label:'MiniMax M2.5',id:'minimax/minimax-m2.5',group:'MiniMax',desc:'SOTA office & coding · token efficient'},
+  'minimax-m2.1':{label:'MiniMax M2.1',id:'minimax/minimax-m2.1',group:'MiniMax',desc:'Lightweight coding & agent workflows'},
+  'minimax-m2':{label:'MiniMax M2',id:'minimax/minimax-m2',group:'MiniMax',desc:'Compact · fast agentic · great value'},
+  'minimax-m2-her':{label:'MiniMax M2-her',id:'minimax/minimax-m2-her',group:'MiniMax',desc:'Dialogue-first · expressive multi-turn chat'},
+  'minimax-m1':{label:'MiniMax M1',id:'minimax/minimax-m1',group:'MiniMax',desc:'Long-context reasoning · 1M tokens'},
+  'minimax-01':{label:'MiniMax-01',id:'minimax/minimax-01',group:'MiniMax',desc:'Hybrid MoE · up to 4M context'}
 };
-const DEPTH={'Quick Scan':{tokens:800,temp:.5,model:'glm-flash'},'Standard':{tokens:1500,temp:.6,model:'glm'},'Deep Dive':{tokens:3000,temp:.7,model:'claude'},'Comprehensive':{tokens:6000,temp:.7,model:'claude-opus'}};
+const DEPTH={'Quick Scan':{tokens:800,temp:.5,model:'glm-flash'},'Standard':{tokens:1500,temp:.6,model:'minimax-m2'},'Deep Dive':{tokens:3000,temp:.7,model:'minimax-m2.7'},'Comprehensive':{tokens:6000,temp:.7,model:'minimax-m3'}};
 const FORMATS={'Summary':'Format as a concise executive summary.','Report':'Format as a structured report with headings.','Bullet Points':'Format as organized bullet points.','Table':'Use markdown tables where appropriate.'};
-const FALLBACKS=['glm-flash','deepseek','glm','gpt-4o-mini','kimi','claude'];
+const FALLBACKS=['glm-flash','minimax-m2','deepseek','glm','gpt-4o-mini','kimi','claude'];
 const errorHandlers={
   401:{msg:'Invalid API key. Check Settings.',action:()=>toggleSettings()},
   402:{msg:'Insufficient credits. Add funds at openrouter.ai'},

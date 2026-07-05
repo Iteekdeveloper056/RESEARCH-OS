@@ -47,7 +47,7 @@ Mobile: bottom tabs switch between screens.
 
 - Login dashboard with session persistence
 - Projects & multi-chat history (localStorage)
-- 6 specialized research agents + Ultimate Researcher system prompt
+- 6 specialized research agents with tailored system prompts
 - Model router (Auto, Claude, GLM, DeepSeek) with fallback on errors
 - Export chats as Markdown
 - Mobile-responsive 3-screen layout
@@ -71,13 +71,7 @@ DEPLOY.md               → GitHub Pages setup guide
 
 ## Repo Policy
 
-| Branch / PR | Status |
-|---|---|
-| `main` | **Canonical** — use this |
-| PR #1 (foundation UI) | Merged |
-| PR #2, #3 (Python CLI / dev env) | Superseded — closed in favor of web dashboard |
-
-A separate Python CLI agent was explored in another conversation (`cursor/build-research-os-agent-9813`). The **web dashboard on `main`** is the chosen product for daily use.
+`main` is the only active branch. Use `research-os/index.html` as the product.
 
 ## License
 

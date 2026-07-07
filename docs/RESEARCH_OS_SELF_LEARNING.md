@@ -4,6 +4,12 @@
 > turning the current stateless research dashboard into a system that **learns from every
 > research session** and gets more useful over time — while staying a static, no-backend,
 > browser-only app.
+>
+> **This is the Research OS instance of the portable
+> [ITEEK LEARN.MD SYSTEM](../skills/iteek-learn-system/SKILL.md)**
+> (`storage_key: ros_memory`). To create the same self-learning goal for another business,
+> submit that system file with its Submission Block filled in — no need to rewrite this
+> design.
 
 ---
 

@@ -6,7 +6,7 @@ version: 1.1
 author: ITEEK AI Solutions
 created: 2026-07-07
 license: MIT
-pairs-with: skills/iteek-router-system/SKILL.md
+pairs-with: iteek-systems/skills/iteek-router-system/SKILL.md
 tags: [iteek-learn, self-learning, memory, personalization, static-app, no-backend, portable, agent-spec]
 compatible-with: [vanilla-js, react, vue, svelte, node, deno, edge-functions]
 ---
@@ -318,9 +318,11 @@ if (learned) parts.unshift(learned);
 
 | System | Role | Location |
 |---|---|---|
-| **ITEEK Router System** | LLM access (pair with LEARN) | `skills/iteek-router-system/SKILL.md` |
-| **Router implementation guide** | Safe API submission | `docs/ITEEK_ROUTER_IMPLEMENTATION.md` |
-| **ITEEK LEARN Builder** | Separate Project/Agent that interviews + generates LEARN files | `docs/ITEEK_LEARN_BUILDER_PROJECT.md` |
+| **ITEEK Router System** | LLM access (pair with LEARN) | `iteek-systems/skills/iteek-router-system/SKILL.md` |
+| **Router Quick Start** | 5-minute Router guide | `iteek-systems/guides/ROUTER_QUICK_START.md` |
+| **LEARN Quick Start** | 5-minute LEARN guide | `iteek-systems/guides/LEARN_QUICK_START.md` |
+| **Router implementation guide** | Safe API submission | `iteek-systems/docs/ITEEK_ROUTER_IMPLEMENTATION.md` |
+| **ITEEK LEARN Builder** | Separate Project/Agent that interviews + generates LEARN files | `iteek-systems/docs/ITEEK_LEARN_BUILDER_PROJECT.md` |
 | **Research OS** | Live research app (separate product; uses Router) | `research-os/index.html` |
 
 ---

@@ -11,8 +11,8 @@
 | Name | What it is |
 |---|---|
 | **ITEEK LEARN Builder** | The **new project/agent** — interviews a person and generates their system. (This doc.) |
-| **ITEEK LEARN.MD SYSTEM** | The **portable spec/output** it generates — the self-learning memory system (complete spec + Research OS reference instance). (`skills/iteek-learn-system/SKILL.md`) |
-| **ITEEK Router System** | The **LLM layer** both projects call. (`skills/iteek-router-system/SKILL.md`) |
+| **ITEEK LEARN.MD SYSTEM** | The **portable spec/output** it generates — the self-learning memory system (complete spec + Research OS reference instance). (`iteek-systems/skills/iteek-learn-system/SKILL.md`) |
+| **ITEEK Router System** | The **LLM layer** both projects call. (`iteek-systems/skills/iteek-router-system/SKILL.md`) |
 | **Research OS** | A **separate** research tool. Not this project. |
 
 Builder = the factory. LEARN.MD = the product it ships. Router = the power supply.

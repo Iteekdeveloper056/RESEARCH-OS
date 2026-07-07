@@ -3,7 +3,7 @@
 > A short, practical guide to implementing the **ITEEK Router System** in any build,
 > using **Research OS** as the reference. The Router is the vendor-neutral LLM layer
 > (built on OpenRouter) documented in
-> [`skills/iteek-router-system/SKILL.md`](../skills/iteek-router-system/SKILL.md).
+> [`iteek-systems/skills/iteek-router-system/SKILL.md`](../skills/iteek-router-system/SKILL.md).
 >
 > This guide's priority: **submitting the API request safely.**
 
@@ -160,7 +160,7 @@ The client code is unchanged — only `baseUrl` and the key source move server-s
 | Routing / depth | `MODELS`, `DEPTH`, `resolveModel()` |
 | Fallback | `retryFallback()` + `FALLBACKS` |
 | Errors | `errorHandlers` + `showError()` |
-| Full pattern | [`skills/iteek-router-system/SKILL.md`](../skills/iteek-router-system/SKILL.md) |
+| Full pattern | [`iteek-systems/skills/iteek-router-system/SKILL.md`](../skills/iteek-router-system/SKILL.md) |
 
 ---
 

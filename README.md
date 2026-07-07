@@ -4,6 +4,17 @@
 
 > This repo's primary app is `research-os/index.html` — a single self-contained file. Use this repo and branch `main`.
 
+## ITEEK Platform (reusable skills — any project)
+
+Looking for the **Router** or **LEARN** systems? They live in **`iteek-systems/`** — not inside the Research OS app.
+
+| System | Quick Start | Full spec |
+|---|---|---|
+| **ITEEK Router System** (LLM access) | [ROUTER_QUICK_START.md](iteek-systems/guides/ROUTER_QUICK_START.md) | [SKILL.md](iteek-systems/skills/iteek-router-system/SKILL.md) |
+| **ITEEK LEARN.MD SYSTEM** (self-learning memory) | [LEARN_QUICK_START.md](iteek-systems/guides/LEARN_QUICK_START.md) | [SKILL.md](iteek-systems/skills/iteek-learn-system/SKILL.md) |
+
+→ Full index: [iteek-systems/README.md](iteek-systems/README.md)
+
 ## Live URL
 
 **https://iteekdeveloper056.github.io/RESEARCH-OS/research-os/**
@@ -64,7 +75,11 @@ Mobile: bottom tabs switch between screens.
 
 ```
 index.html              → Redirects to research-os/
-research-os/index.html  → Complete app (HTML + CSS + JS)
+research-os/index.html  → Research OS app (HTML + CSS + JS)
+iteek-systems/          → ITEEK Router + LEARN skills (reusable platform specs)
+  guides/               → Short quick-start guides
+  skills/               → Full SKILL.md specifications
+  docs/                 → Implementation + builder project outlines
 DEPLOY.md               → GitHub Pages setup guide
 .github/workflows/      → Auto-deploy on push to main
 ```

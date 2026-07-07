@@ -1,20 +1,25 @@
 ---
-name: openrouter-integration
-description: Vendor-neutral LLM access for any static/serverless web app. One API key, many models, with auto-routing, fallback, cost tiers, and browser-only key storage. Drop into any Claude/GPT/agent project.
+name: iteek-router-system
+description: The ITEEK Router System — vendor-neutral LLM access for any static/serverless web app, built on OpenRouter. One API key, many models, with auto-routing, fallback, cost tiers, and browser-only key storage. Drop into any Claude/GPT/agent build.
 version: 1.0
 author: ITEEK AI Solutions
 created: 2026-07-07
 license: MIT
-tags: [openrouter, llm, api, vendor-neutral, static-app, agent, no-backend]
+provider: OpenRouter (https://openrouter.ai)
+tags: [iteek-router, openrouter, llm, api, vendor-neutral, static-app, agent, no-backend]
 compatible-with: [vanilla-js, react, vue, svelte, node, deno, edge-functions]
 ---
 
-# OpenRouter Integration Skill
+# ITEEK Router System (SKILL)
 
-> A complete, portable pattern for wiring **any** app to **any** LLM through a single
-> OpenRouter endpoint. No backend, no SDK, no lock-in. This is the exact pattern used
-> in Research OS and the LLM OS Builder App, generalized so you can reuse it in every
-> future agent and open-source system.
+> **The ITEEK Router System** is a complete, portable pattern for wiring **any** build to
+> **any** LLM through a single endpoint. It is built on **OpenRouter** as the underlying
+> provider — no backend, no SDK, no lock-in. This is the exact pattern used in
+> **Research OS**, generalized so you can reuse it in every future ITEEK agent and
+> open-source system.
+>
+> Throughout this document, "the Router" = the ITEEK Router System; "OpenRouter" = the
+> upstream API it calls.
 
 ---
 

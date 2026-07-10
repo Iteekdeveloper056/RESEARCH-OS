@@ -33,6 +33,22 @@ Looking for the **Router** or **LEARN** systems? They live in **`iteek-systems/`
 4. **Screen 2 (center):** type a message, press Enter
 5. **Screen 1 (left):** manage projects and chats
 
+## Local environment variables
+
+Copy the template and fill in secrets (file is gitignored):
+
+```bash
+cp .env.local.example .env.local
+```
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `OPENROUTER_API_KEY` | Yes (for LLM calls) | [OpenRouter](https://openrouter.ai/keys) API key |
+
+- **Browser app:** paste the key in Login / Settings (`localStorage` only — the static app does not load `.env.local`).
+- **Cursor Cloud agents:** add the same variables in the environment Secrets tab; see [AGENTS.md](AGENTS.md).
+- Never commit `.env.local` or hard-code keys in source.
+
 ## 3-Screen UI
 
 | Screen | Panel | Purpose |
@@ -80,6 +96,8 @@ iteek-systems/          → ITEEK Router + LEARN skills (reusable platform specs
   guides/               → Short quick-start guides
   skills/               → Full SKILL.md specifications
   docs/                 → Implementation + builder project outlines
+.env.local.example      → Template for local / Cursor secrets (copy → .env.local)
+AGENTS.md               → Cursor Cloud agent instructions
 DEPLOY.md               → GitHub Pages setup guide
 .github/workflows/      → Auto-deploy on push to main
 ```

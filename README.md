@@ -15,9 +15,12 @@ Looking for the **Router** or **LEARN** systems? They live in **`iteek-systems/`
 
 → Full index: [iteek-systems/README.md](iteek-systems/README.md)
 
-## Live URL
+## Live Apps
 
-**https://iteekdeveloper056.github.io/RESEARCH-OS/research-os/**
+| App | URL |
+|---|---|
+| **Research OS** | https://iteekdeveloper056.github.io/RESEARCH-OS/research-os/ |
+| **LLM OS Builder** | https://iteekdeveloper056.github.io/RESEARCH-OS/llm-os-builder-app/ |
 
 > First-time? Enable GitHub Pages: [DEPLOY.md](DEPLOY.md) (one-time, 2 min)
 

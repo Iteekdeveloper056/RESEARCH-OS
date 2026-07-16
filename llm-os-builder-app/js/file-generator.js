@@ -212,7 +212,7 @@ Pass/fail. Must pass.
 ### Gate 5: Format
 Pass/fail. Must pass.
 - Margins use Mm() not Cm() (if DOCX)
-- Inline bullets (`•  ` not List Bullet style)
+- Inline bullets (\`•  \` not List Bullet style)
 - Brand fonts + colors applied
 - A4 page size (if document)
 

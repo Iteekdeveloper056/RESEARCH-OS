@@ -54,6 +54,9 @@ async function callLLM(messages, options = {}) {
   const temperature = options.temperature !== undefined ? options.temperature : 0.7;
   const maxTokens = options.maxTokens || 4096;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 60000);
+
   try {
     const response = await fetch(API_CONFIG.baseUrl, {
       method: "POST",
@@ -61,8 +64,9 @@ async function callLLM(messages, options = {}) {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": window.location.origin,
-        "X-Title": "LLM OS Builder App"
+        "X-OpenRouter-Title": "LLM OS Builder App"
       },
+      signal: options.signal || controller.signal,
       body: JSON.stringify({
         model: model,
         messages: messages,
@@ -73,25 +77,42 @@ async function callLLM(messages, options = {}) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorBody = await response.json().catch(() => ({}));
+      const errorMessage = errorBody.error?.message || `Request failed with status ${response.status}`;
       return {
         success: false,
-        error: `API error (${response.status}): ${errorText}`
+        status: response.status,
+        error: errorMessage
       };
     }
 
     const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      return {
+        success: false,
+        status: 500,
+        error: "The model returned an empty response. Please retry or choose another model."
+      };
+    }
+
     return {
       success: true,
-      content: data.choices[0].message.content,
+      content: content,
       model: data.model,
       usage: data.usage
     };
   } catch (err) {
+    const timedOut = err.name === "AbortError";
     return {
       success: false,
-      error: `Network error: ${err.message}. Check your connection and API key.`
+      status: timedOut ? 408 : "network",
+      error: timedOut
+        ? "The request timed out. Please retry or choose a faster model."
+        : `Network error: ${err.message}. Check your connection and API key.`
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

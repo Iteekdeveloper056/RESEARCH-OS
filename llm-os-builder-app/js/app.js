@@ -10,7 +10,9 @@ const App = {
     chatHistory: [],              // Conversation history
     currentView: 'welcome',       // Active view
     apiKeySet: false,             // Whether OpenRouter API key is set
-    pastOperators: []             // Saved operators in localStorage
+    isSending: false,             // Prevent duplicate API submissions
+    pastOperators: [],            // Saved operators in localStorage
+    engagements: {}               // Profile + chat history keyed by operator ID
   },
 
   // ================================
@@ -31,10 +33,19 @@ const App = {
       try {
         const parsed = JSON.parse(saved);
         this.state.pastOperators = parsed.pastOperators || [];
+        this.state.engagements = parsed.engagements || {};
         if (parsed.currentOperator) {
           this.state.currentOperator = parsed.currentOperator;
           this.state.currentProfile = parsed.currentProfile || {};
           this.state.chatHistory = parsed.chatHistory || [];
+
+          // Migrate v1 state into the per-operator engagement store.
+          if (!this.state.engagements[parsed.currentOperator.id]) {
+            this.state.engagements[parsed.currentOperator.id] = {
+              profile: this.state.currentProfile,
+              chatHistory: this.state.chatHistory
+            };
+          }
         }
       } catch (err) {
         console.error('Failed to load state:', err);
@@ -43,11 +54,19 @@ const App = {
   },
 
   saveState: function() {
+    if (this.state.currentOperator) {
+      this.state.engagements[this.state.currentOperator.id] = {
+        profile: this.state.currentProfile,
+        chatHistory: this.state.chatHistory
+      };
+    }
+
     const toSave = {
       currentOperator: this.state.currentOperator,
       currentProfile: this.state.currentProfile,
       chatHistory: this.state.chatHistory,
-      pastOperators: this.state.pastOperators
+      pastOperators: this.state.pastOperators,
+      engagements: this.state.engagements
     };
     localStorage.setItem('llm_os_builder_state', JSON.stringify(toSave));
   },
@@ -65,7 +84,7 @@ const App = {
       status.textContent = `✅ Connected — ${model}`;
       status.classList.add('active');
     } else {
-      status.textContent = '⚠️ Set API key in Settings to use Claude';
+      status.textContent = '⚠️ Set your OpenRouter API key in Settings';
       status.classList.remove('active');
     }
   },
@@ -261,6 +280,10 @@ const App = {
     this.state.currentOperator = operator;
     this.state.currentProfile = {};
     this.state.chatHistory = [];
+    this.state.engagements[operator.id] = {
+      profile: {},
+      chatHistory: []
+    };
 
     // Save operator
     if (!this.state.pastOperators.find(o => o.id === operator.id)) {
@@ -307,9 +330,13 @@ const App = {
   },
 
   sendMessage: async function() {
+    if (this.state.isSending) return;
+
     const input = document.getElementById('chat-input');
     const text = input.value.trim();
     if (!text) return;
+
+    this.state.isSending = true;
 
     // Add user message
     this.addMessage('user', text);
@@ -338,17 +365,19 @@ const App = {
     this.hideTyping();
 
     if (result.success) {
-      this.addMessage('agent', result.content);
-      this.state.chatHistory.push({ role: 'assistant', content: result.content });
+      const parsed = this.extractProfileData(result.content);
+      const responseText = parsed.cleanMessage || result.content;
 
-      // Try to extract profile data from response
-      this.extractProfileData(result.content);
+      this.addMessage('agent', responseText);
+      this.state.chatHistory.push({ role: 'assistant', content: responseText });
 
       this.saveState();
       this.updateProgress();
     } else {
       this.addMessage('agent', `⚠️ ${result.error}\n\nSet your OpenRouter API key in Settings (⚙️) to start chatting.`);
     }
+
+    this.state.isSending = false;
   },
 
   buildSystemPrompt: function() {
@@ -377,18 +406,22 @@ const App = {
       });
     }
 
+    prompt += `\n\n=== PROFILE UPDATE PROTOCOL ===
+After responding naturally, append exactly one hidden HTML comment containing any new
+Discovery facts learned from the operator's latest message:
+<!-- PROFILE_UPDATES: {"field-id":"captured value"} -->
+Use only these valid field IDs:
+${Object.keys(ProfileBuilder.fields).join(', ')}
+Include only facts the operator actually provided. Never guess. Use {} when nothing new
+was learned. Keep asking one Discovery question at a time.`;
+
     return prompt;
   },
 
   extractProfileData: function(message) {
-    // Simple heuristic — look for patterns like "**Label:** Value"
-    // Real implementation would use structured JSON from agent
-    const fieldPatterns = {
-      'business-description': /business (?:is|in a nutshell|does)[^.]*?([^.!?]+)[.!?]/i,
-      'industry-niche': /(?:industry|niche)[^.]*?([^.!?]+)[.!?]/i
-    };
-
-    // For now, no automatic extraction — operator can manually mark answers
+    const parsed = ProfileBuilder.parseAgentMessage(message, this.state.currentProfile);
+    this.state.currentProfile = parsed.profile;
+    return parsed;
   },
 
   addMessage: function(role, text) {
@@ -428,6 +461,12 @@ const App = {
     formatted = formatted.replace(/\n/g, '<br>');
 
     return formatted;
+  },
+
+  escapeHTML: function(value) {
+    const div = document.createElement('div');
+    div.textContent = String(value ?? '');
+    return div.innerHTML;
   },
 
   showTyping: function() {
@@ -561,13 +600,13 @@ const App = {
       return;
     }
 
-    const industryTemplate = INDUSTRY_TEMPLATES.find(t => t.id === this.state.currentOperator.businessType);
+    const businessName = this.escapeHTML(this.state.currentOperator.business);
 
     list.innerHTML = `
       <div class="deliverable-item">
         <div class="deliverable-icon">📋</div>
         <div class="deliverable-info">
-          <div class="deliverable-name">${this.state.currentOperator.business}_TRUE_NAME.md</div>
+          <div class="deliverable-name">${businessName}_TRUE_NAME.md</div>
           <div class="deliverable-desc">Brand master file — voice, compliance, frameworks</div>
         </div>
         <div class="deliverable-actions">
@@ -579,7 +618,7 @@ const App = {
       <div class="deliverable-item">
         <div class="deliverable-icon">⚙️</div>
         <div class="deliverable-info">
-          <div class="deliverable-name">${this.state.currentOperator.business}_TRUE_PROCESS_CONTENT.md</div>
+          <div class="deliverable-name">${businessName}_TRUE_PROCESS_CONTENT.md</div>
           <div class="deliverable-desc">Content production True Process with 5 quality gates</div>
         </div>
         <div class="deliverable-actions">
@@ -590,7 +629,7 @@ const App = {
       <div class="deliverable-item">
         <div class="deliverable-icon">🧩</div>
         <div class="deliverable-info">
-          <div class="deliverable-name">${this.state.currentOperator.business}_SKILL.md</div>
+          <div class="deliverable-name">${businessName}_SKILL.md</div>
           <div class="deliverable-desc">Portable LLM skill — drop into any Claude/ChatGPT session</div>
         </div>
         <div class="deliverable-actions">
@@ -711,8 +750,11 @@ const App = {
     if (key && key.trim()) {
       localStorage.setItem('openrouter_api_key', key.trim());
       this.state.apiKeySet = true;
-      this.updateModelStatus();
+    } else {
+      localStorage.removeItem('openrouter_api_key');
+      this.state.apiKeySet = false;
     }
+    this.updateModelStatus();
   },
 
   testConnection: async function() {
@@ -742,8 +784,8 @@ const App = {
     list.innerHTML = this.state.pastOperators.map(op => `
       <div class="operator-item" onclick="App.loadOperator('${op.id}')">
         <div>
-          <div style="font-weight: 600;">${op.business}</div>
-          <div style="font-size: 13px; color: var(--text-muted);">${op.name} • ${op.businessType}</div>
+          <div style="font-weight: 600;">${this.escapeHTML(op.business)}</div>
+          <div style="font-size: 13px; color: var(--text-muted);">${this.escapeHTML(op.name)} • ${this.escapeHTML(op.businessType)}</div>
         </div>
         <div style="color: var(--text-muted); font-size: 13px;">${new Date(op.createdAt).toLocaleDateString()}</div>
       </div>
@@ -755,16 +797,11 @@ const App = {
     if (!op) return;
 
     this.state.currentOperator = op;
-    // Reload profile + chat from saved state if same operator
-    const saved = localStorage.getItem('llm_os_builder_state');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.currentOperator && parsed.currentOperator.id === operatorId) {
-        this.state.currentProfile = parsed.currentProfile || {};
-        this.state.chatHistory = parsed.chatHistory || [];
-      }
-    }
+    const engagement = this.state.engagements[operatorId] || {};
+    this.state.currentProfile = engagement.profile || {};
+    this.state.chatHistory = engagement.chatHistory || [];
 
+    this.saveState();
     this.switchView('chat');
   }
 };

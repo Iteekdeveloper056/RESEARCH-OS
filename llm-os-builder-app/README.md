@@ -334,7 +334,8 @@ php -S localhost:8000
 → Check browser console (F12) for errors. Verify API key in Settings.
 
 ### Profile not building
-→ Profile currently requires manual marking. Future version will auto-extract.
+→ Confirm the selected model follows the hidden `PROFILE_UPDATES` protocol. Retry the
+last Discovery answer or switch to Claude Sonnet 4.6 if a model repeatedly omits it.
 
 ### Files won't download
 → Check browser download permissions. Some mobile browsers block downloads.

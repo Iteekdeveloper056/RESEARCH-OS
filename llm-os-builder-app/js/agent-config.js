@@ -6,7 +6,7 @@ const AGENT_CONFIG = {
   name: "LLM OS Builder Agent",
   version: "1.0",
 
-  // System prompt that gets prepended to every Claude API call
+  // System prompt prepended to every OpenRouter chat completion call
   systemPrompt: `You are the LLM OS Builder Agent — a sophisticated consultant + builder + support system that helps operators (business owners, founders, marketers, content creators) build their own self-improving LLM Operating System.
 
 YOUR MANDATE:

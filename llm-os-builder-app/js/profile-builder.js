@@ -60,11 +60,40 @@ const ProfileBuilder = {
     "start-timing": { section: "Wrap-Up", label: "Start Timing", order: 38 }
   },
 
-  // Parse agent message for profile field updates
+  // Parse the hidden structured profile block returned by the agent.
+  // Example: <!-- PROFILE_UPDATES: {"industry-niche":"Wellness"} -->
   parseAgentMessage: function(message, currentProfile) {
-    // This is a simple heuristic — agent will announce when it's captured something
-    // Real implementation would use structured prompts
-    return currentProfile;
+    const marker = /<!--\s*PROFILE_UPDATES\s*:\s*(\{[\s\S]*?\})\s*-->/gi;
+    const profile = { ...currentProfile };
+    const updatedFields = [];
+    let match;
+
+    while ((match = marker.exec(message)) !== null) {
+      try {
+        const updates = JSON.parse(match[1]);
+        Object.entries(updates).forEach(([fieldId, value]) => {
+          if (!this.fields[fieldId] || value === null || value === undefined) return;
+
+          const cleanValue = String(value).trim().slice(0, 5000);
+          if (!cleanValue) return;
+
+          profile[fieldId] = cleanValue;
+          updatedFields.push(fieldId);
+        });
+      } catch (err) {
+        console.warn('Ignored invalid profile update from agent:', err);
+      }
+    }
+
+    if (updatedFields.length > 0) {
+      profile.lastUpdated = new Date().toISOString();
+    }
+
+    return {
+      profile,
+      updatedFields: [...new Set(updatedFields)],
+      cleanMessage: message.replace(marker, '').trim()
+    };
   },
 
   // Manually update profile field (called when user explicitly provides info)

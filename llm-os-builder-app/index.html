@@ -222,7 +222,7 @@
 
         <div class="deliverables-actions" id="deliverables-actions" style="display:none;">
           <button class="btn-primary" id="generate-true-name-btn">Generate True Name File</button>
-          <button class="btn-secondary" id="download-all-btn">📥 Download All (ZIP)</button>
+          <button class="btn-secondary" id="download-all-btn">📥 Download All Files</button>
         </div>
       </div>
     </div>
@@ -262,10 +262,10 @@
 
       <div class="modal-body">
         <div class="setting-group">
-          <label for="api-key-input">Claude API Key (Anthropic)</label>
-          <input type="password" id="api-key-input" placeholder="sk-ant-...">
+          <label for="api-key-input">OpenRouter API Key</label>
+          <input type="password" id="api-key-input" placeholder="sk-or-v1-..." autocomplete="off">
           <p class="setting-help">
-            Get your key from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>.
+            Get your key from <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>.
             Stored locally in your browser only.
           </p>
         </div>
@@ -273,9 +273,9 @@
         <div class="setting-group">
           <label for="model-select">Model</label>
           <select id="model-select">
-            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (recommended)</option>
-            <option value="claude-haiku-4-5">Claude Haiku 4.5 (faster, cheaper)</option>
-            <option value="claude-opus-4-1">Claude Opus 4.1 (highest quality)</option>
+            <option value="anthropic/claude-sonnet-4.6">Claude Sonnet 4.6 (recommended)</option>
+            <option value="anthropic/claude-haiku-4.5">Claude Haiku 4.5 (faster, cheaper)</option>
+            <option value="anthropic/claude-opus-4.1">Claude Opus 4.1 (highest quality)</option>
           </select>
         </div>
 
